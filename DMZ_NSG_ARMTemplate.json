@@ -1,0 +1,676 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "location": {
+      "type": "string",
+      "metadata": {
+        "description": "This is the region where the resources will be created"
+      }
+    },
+    "virtualNetworkName": {
+      "type": "string",
+      "defaultValue": "First_ARM_VNet",
+      "metadata": {
+        "description": "This is your Virtual Network"
+      }
+    },
+    "addressPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/16",
+      "metadata": {
+        "description": "The CIDR address space for your Virtual Network in Azure"
+      }
+    },
+    "FESubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.0.0/24",
+      "metadata": {
+        "description": "This is CIDR prefix for the FrontEnd Subnet"
+      }
+    },
+    "AppSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.1.0/24",
+      "metadata": {
+        "description": "This is CIDR prefix for the Application Subnet"
+      }
+    },
+    "DBSubnetPrefix": {
+      "type": "string",
+      "defaultValue": "10.0.2.0/24",
+      "metadata": {
+        "description": "This is CIDR prefix for the Database Subnet"
+      }
+    },
+    "FENSGName": {
+      "type": "string",
+      "defaultValue": "FE_NSG",
+      "metadata": {
+        "description": "This is name of the networkSecurityGroup that will be assigned to FrontEnd Subnet"
+      }
+    },
+    "AppNSGName": {
+      "type": "string",
+      "defaultValue": "App_NSG",
+      "metadata": {
+        "description": "This is name of the networkSecurityGroup that will be assigned to Application Subnet"
+      }
+    },
+    "DBNSGName": {
+      "type": "string",
+      "defaultValue": "DB_NSG",
+      "metadata": {
+        "description": "This is name of the networkSecurityGroup that will be assigned to Database Subnet"
+      }
+    },
+      "dmzdemostrType": {
+          "type": "string",
+          "defaultValue": "Standard_LRS",
+          "allowedValues": [
+              "Standard_LRS",
+              "Standard_ZRS",
+              "Standard_GRS",
+              "Standard_RAGRS",
+              "Premium_LRS"
+          ]
+      },
+      "dmzdemofevmName": {
+          "type": "string",
+          "minLength": 1
+      },
+      "dmzdemofevmAdminUserName": {
+          "type": "string",
+          "minLength": 1
+      },
+      "dmzdemofevmAdminPassword": {
+          "type": "securestring"
+      },
+      "dmzdemofevmWindowsOSVersion": {
+          "type": "string",
+          "defaultValue": "2012-R2-Datacenter",
+          "allowedValues": [
+              "2008-R2-SP1",
+              "2012-Datacenter",
+              "2012-R2-Datacenter",
+              "Windows-Server-Technical-Preview"
+          ]
+      },
+      "dmzdemoappvmName": {
+          "type": "string",
+          "minLength": 1
+      },
+      "dmzdemoappvmAdminUserName": {
+          "type": "string",
+          "minLength": 1
+      },
+      "dmzdemoappvmAdminPassword": {
+          "type": "securestring"
+      },
+      "dmzdemoappvmWindowsOSVersion": {
+          "type": "string",
+          "defaultValue": "2012-R2-Datacenter",
+          "allowedValues": [
+              "2008-R2-SP1",
+              "2012-Datacenter",
+              "2012-R2-Datacenter",
+              "Windows-Server-Technical-Preview"
+          ]
+      },
+      "dmzdemodbvmName": {
+          "type": "string",
+          "minLength": 1
+      },
+      "dmzdemodbvmAdminUserName": {
+          "type": "string",
+          "minLength": 1
+      },
+      "dmzdemodbvmAdminPassword": {
+          "type": "securestring"
+      },
+      "dmzdemodbvmWindowsOSVersion": {
+          "type": "string",
+          "defaultValue": "2012-R2-Datacenter",
+          "allowedValues": [
+              "2008-R2-SP1",
+              "2012-Datacenter",
+              "2012-R2-Datacenter",
+              "Windows-Server-Technical-Preview"
+          ]
+      },
+      "dmzdemofevmpipDnsName": {
+          "type": "string",
+          "minLength": 1
+      },
+      "dmzdemoappvmpipDnsName": {
+          "type": "string",
+          "minLength": 1
+      },
+      "dmzdemodbvmpipDnsName": {
+          "type": "string",
+          "minLength": 1
+      }
+  },
+  "resources": [
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('FENSGName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "rdp_rule",
+            "properties": {
+              "description": "Allow RDP",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "web_rule",
+            "properties": {
+              "description": "Allow WEB",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "80",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 101,
+              "direction": "Inbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('AppNSGName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow_FE",
+            "properties": {
+              "description": "Allow FE Subnet",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "443",
+              "sourceAddressPrefix": "10.0.0.0/24",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Block_RDP_Internet",
+            "properties": {
+              "description": "Block RDP",
+              "protocol": "tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "3389",
+              "sourceAddressPrefix": "Internet",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 101,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Block_Internet_Outbound",
+            "properties": {
+              "description": "Block Internet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "Internet",
+              "access": "Deny",
+              "priority": 200,
+              "direction": "Outbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/networkSecurityGroups",
+      "name": "[parameters('DBNSGName')]",
+      "location": "[parameters('location')]",
+      "properties": {
+        "securityRules": [
+          {
+            "name": "Allow_App",
+            "properties": {
+              "description": "Allow APP Subnet",
+              "protocol": "Tcp",
+              "sourcePortRange": "*",
+              "destinationPortRange": "1433",
+              "sourceAddressPrefix": "10.0.1.0/24",
+              "destinationAddressPrefix": "*",
+              "access": "Allow",
+              "priority": 100,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Block_FE",
+            "properties": {
+              "description": "Block FE Subnet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "10.0.0.0/24",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 101,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Block_App",
+            "properties": {
+              "description": "Block App Subnet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "10.0.1.0/24",
+              "destinationAddressPrefix": "*",
+              "access": "Deny",
+              "priority": 102,
+              "direction": "Inbound"
+            }
+          },
+          {
+            "name": "Block_Internet",
+            "properties": {
+              "description": "Block Internet",
+              "protocol": "*",
+              "sourcePortRange": "*",
+              "destinationPortRange": "*",
+              "sourceAddressPrefix": "*",
+              "destinationAddressPrefix": "Internet",
+              "access": "Deny",
+              "priority": 200,
+              "direction": "Outbound"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "apiVersion": "2015-05-01-preview",
+      "type": "Microsoft.Network/virtualNetworks",
+      "name": "[parameters('virtualNetworkName')]",
+      "location": "[parameters('location')]",
+      "dependsOn": [
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('FENSGName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('AppNSGName'))]",
+        "[concat('Microsoft.Network/networkSecurityGroups/', parameters('DBNSGName'))]"
+      ],
+      "properties": {
+        "addressSpace": {
+          "addressPrefixes": [
+            "[parameters('addressPrefix')]"
+          ]
+        },
+        "subnets": [
+          {
+            "name": "FESubnetName",
+            "properties": {
+              "addressPrefix": "[parameters('FESubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('FENSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "AppSubnetName",
+            "properties": {
+              "addressPrefix": "[parameters('AppSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('AppNSGName'))]"
+              }
+            }
+          },
+          {
+            "name": "DBSubnetName",
+            "properties": {
+              "addressPrefix": "[parameters('DBSubnetPrefix')]",
+              "networkSecurityGroup": {
+                "id": "[resourceId('Microsoft.Network/networkSecurityGroups', parameters('DBNSGName'))]"
+              }
+            }
+          }
+        ]
+      }
+    },
+      {
+          "name": "[variables('dmzdemostrName')]",
+          "type": "Microsoft.Storage/storageAccounts",
+          "location": "[resourceGroup().location]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [ ],
+          "tags": {
+              "displayName": "dmzdemostr"
+          },
+          "properties": {
+              "accountType": "[parameters('dmzdemostrType')]"
+          }
+      },
+      {
+          "name": "[variables('dmzdemofevmNicName')]",
+          "type": "Microsoft.Network/networkInterfaces",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [
+              "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+              "[concat('Microsoft.Network/publicIPAddresses/', variables('dmzdemofevmpipName'))]"
+          ],
+          "tags": {
+              "displayName": "dmzdemofevmNic"
+          },
+          "properties": {
+              "ipConfigurations": [
+                  {
+                      "name": "ipconfig1",
+                      "properties": {
+                          "privateIPAllocationMethod": "Dynamic",
+                          "subnet": {
+                              "id": "[variables('dmzdemofevmSubnetRef')]"
+                          },
+                          "publicIPAddress": {
+                              "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('dmzdemofevmpipName'))]"
+                          }
+                      }
+                  }
+              ]
+          }
+      },
+      {
+          "name": "[parameters('dmzdemofevmName')]",
+          "type": "Microsoft.Compute/virtualMachines",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [
+              "[concat('Microsoft.Storage/storageAccounts/', variables('dmzdemostrName'))]",
+              "[concat('Microsoft.Network/networkInterfaces/', variables('dmzdemofevmNicName'))]"
+          ],
+          "tags": {
+              "displayName": "dmzdemofevm"
+          },
+          "properties": {
+              "hardwareProfile": {
+                  "vmSize": "[variables('dmzdemofevmVmSize')]"
+              },
+              "osProfile": {
+                  "computerName": "[parameters('dmzdemofevmName')]",
+                  "adminUsername": "[parameters('dmzdemofevmAdminUsername')]",
+                  "adminPassword": "[parameters('dmzdemofevmAdminPassword')]"
+              },
+              "storageProfile": {
+                  "imageReference": {
+                      "publisher": "[variables('dmzdemofevmImagePublisher')]",
+                      "offer": "[variables('dmzdemofevmImageOffer')]",
+                      "sku": "[parameters('dmzdemofevmWindowsOSVersion')]",
+                      "version": "latest"
+                  },
+                  "osDisk": {
+                      "name": "dmzdemofevmOSDisk",
+                      "vhd": {
+                          "uri": "[concat('http://', variables('dmzdemostrName'), '.blob.core.windows.net/', variables('dmzdemofevmStorageAccountContainerName'), '/', variables('dmzdemofevmOSDiskName'), '.vhd')]"
+                      },
+                      "caching": "ReadWrite",
+                      "createOption": "FromImage"
+                  }
+              },
+              "networkProfile": {
+                  "networkInterfaces": [
+                      {
+                          "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('dmzdemofevmNicName'))]"
+                      }
+                  ]
+              }
+          }
+      },
+      {
+          "name": "[variables('dmzdemoappvmNicName')]",
+          "type": "Microsoft.Network/networkInterfaces",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [
+              "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+              "[concat('Microsoft.Network/publicIPAddresses/', variables('dmzdemoappvmpipName'))]"
+          ],
+          "tags": {
+              "displayName": "dmzdemoappvmNic"
+          },
+          "properties": {
+              "ipConfigurations": [
+                  {
+                      "name": "ipconfig1",
+                      "properties": {
+                          "privateIPAllocationMethod": "Dynamic",
+                          "subnet": {
+                              "id": "[variables('dmzdemoappvmSubnetRef')]"
+                          },
+                          "publicIPAddress": {
+                              "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('dmzdemoappvmpipName'))]"
+                          }
+                      }
+                  }
+              ]
+          }
+      },
+      {
+          "name": "[parameters('dmzdemoappvmName')]",
+          "type": "Microsoft.Compute/virtualMachines",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [
+              "[concat('Microsoft.Storage/storageAccounts/', variables('dmzdemostrName'))]",
+              "[concat('Microsoft.Network/networkInterfaces/', variables('dmzdemoappvmNicName'))]"
+          ],
+          "tags": {
+              "displayName": "dmzdemoappvm"
+          },
+          "properties": {
+              "hardwareProfile": {
+                  "vmSize": "[variables('dmzdemoappvmVmSize')]"
+              },
+              "osProfile": {
+                  "computerName": "[parameters('dmzdemoappvmName')]",
+                  "adminUsername": "[parameters('dmzdemoappvmAdminUsername')]",
+                  "adminPassword": "[parameters('dmzdemoappvmAdminPassword')]"
+              },
+              "storageProfile": {
+                  "imageReference": {
+                      "publisher": "[variables('dmzdemoappvmImagePublisher')]",
+                      "offer": "[variables('dmzdemoappvmImageOffer')]",
+                      "sku": "[parameters('dmzdemoappvmWindowsOSVersion')]",
+                      "version": "latest"
+                  },
+                  "osDisk": {
+                      "name": "dmzdemoappvmOSDisk",
+                      "vhd": {
+                          "uri": "[concat('http://', variables('dmzdemostrName'), '.blob.core.windows.net/', variables('dmzdemoappvmStorageAccountContainerName'), '/', variables('dmzdemoappvmOSDiskName'), '.vhd')]"
+                      },
+                      "caching": "ReadWrite",
+                      "createOption": "FromImage"
+                  }
+              },
+              "networkProfile": {
+                  "networkInterfaces": [
+                      {
+                          "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('dmzdemoappvmNicName'))]"
+                      }
+                  ]
+              }
+          }
+      },
+      {
+          "name": "[variables('dmzdemodbvmNicName')]",
+          "type": "Microsoft.Network/networkInterfaces",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [
+              "[concat('Microsoft.Network/virtualNetworks/', parameters('virtualNetworkName'))]",
+              "[concat('Microsoft.Network/publicIPAddresses/', variables('dmzdemodbvmpipName'))]"
+          ],
+          "tags": {
+              "displayName": "dmzdemodbvmNic"
+          },
+          "properties": {
+              "ipConfigurations": [
+                  {
+                      "name": "ipconfig1",
+                      "properties": {
+                          "privateIPAllocationMethod": "Dynamic",
+                          "subnet": {
+                              "id": "[variables('dmzdemodbvmSubnetRef')]"
+                          },
+                          "publicIPAddress": {
+                              "id": "[resourceId('Microsoft.Network/publicIPAddresses', variables('dmzdemodbvmpipName'))]"
+                          }
+                      }
+                  }
+              ]
+          }
+      },
+      {
+          "name": "[parameters('dmzdemodbvmName')]",
+          "type": "Microsoft.Compute/virtualMachines",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [
+              "[concat('Microsoft.Storage/storageAccounts/', variables('dmzdemostrName'))]",
+              "[concat('Microsoft.Network/networkInterfaces/', variables('dmzdemodbvmNicName'))]"
+          ],
+          "tags": {
+              "displayName": "dmzdemodbvm"
+          },
+          "properties": {
+              "hardwareProfile": {
+                  "vmSize": "[variables('dmzdemodbvmVmSize')]"
+              },
+              "osProfile": {
+                  "computerName": "[parameters('dmzdemodbvmName')]",
+                  "adminUsername": "[parameters('dmzdemodbvmAdminUsername')]",
+                  "adminPassword": "[parameters('dmzdemodbvmAdminPassword')]"
+              },
+              "storageProfile": {
+                  "imageReference": {
+                      "publisher": "[variables('dmzdemodbvmImagePublisher')]",
+                      "offer": "[variables('dmzdemodbvmImageOffer')]",
+                      "sku": "[parameters('dmzdemodbvmWindowsOSVersion')]",
+                      "version": "latest"
+                  },
+                  "osDisk": {
+                      "name": "dmzdemodbvmOSDisk",
+                      "vhd": {
+                          "uri": "[concat('http://', variables('dmzdemostrName'), '.blob.core.windows.net/', variables('dmzdemodbvmStorageAccountContainerName'), '/', variables('dmzdemodbvmOSDiskName'), '.vhd')]"
+                      },
+                      "caching": "ReadWrite",
+                      "createOption": "FromImage"
+                  }
+              },
+              "networkProfile": {
+                  "networkInterfaces": [
+                      {
+                          "id": "[resourceId('Microsoft.Network/networkInterfaces', variables('dmzdemodbvmNicName'))]"
+                      }
+                  ]
+              }
+          }
+      },
+      {
+          "name": "[variables('dmzdemofevmpipName')]",
+          "type": "Microsoft.Network/publicIPAddresses",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [ ],
+          "tags": {
+              "displayName": "dmzdemofevmpip"
+          },
+          "properties": {
+              "publicIPAllocationMethod": "Dynamic",
+              "dnsSettings": {
+                  "domainNameLabel": "[parameters('dmzdemofevmpipDnsName')]"
+              }
+          }
+      },
+      {
+          "name": "[variables('dmzdemoappvmpipName')]",
+          "type": "Microsoft.Network/publicIPAddresses",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [ ],
+          "tags": {
+              "displayName": "dmzdemoappvmpip"
+          },
+          "properties": {
+              "publicIPAllocationMethod": "Dynamic",
+              "dnsSettings": {
+                  "domainNameLabel": "[parameters('dmzdemoappvmpipDnsName')]"
+              }
+          }
+      },
+      {
+          "name": "[variables('dmzdemodbvmpipName')]",
+          "type": "Microsoft.Network/publicIPAddresses",
+          "location": "[parameters('location')]",
+          "apiVersion": "2015-05-01-preview",
+          "dependsOn": [ ],
+          "tags": {
+              "displayName": "dmzdemodbvmpip"
+          },
+          "properties": {
+              "publicIPAllocationMethod": "Dynamic",
+              "dnsSettings": {
+                  "domainNameLabel": "[parameters('dmzdemodbvmpipDnsName')]"
+              }
+          }
+      }
+  ],
+    "variables": {
+        "dmzdemostrName": "[concat('dmzdemostr', uniqueString(resourceGroup().id))]",
+        "dmzdemofevmImagePublisher": "MicrosoftWindowsServer",
+        "dmzdemofevmImageOffer": "WindowsServer",
+        "dmzdemofevmOSDiskName": "dmzdemofevmOSDisk",
+        "dmzdemofevmVmSize": "Standard_D1",
+        "dmzdemofevmVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+        "dmzdemofevmSubnetRef": "[concat(variables('dmzdemofevmVnetID'), '/subnets/', 'FESubnetName')]",
+        "dmzdemofevmStorageAccountContainerName": "vhds",
+        "dmzdemofevmNicName": "[concat(parameters('dmzdemofevmName'), 'NetworkInterface')]",
+        "dmzdemoappvmImagePublisher": "MicrosoftWindowsServer",
+        "dmzdemoappvmImageOffer": "WindowsServer",
+        "dmzdemoappvmOSDiskName": "dmzdemoappvmOSDisk",
+        "dmzdemoappvmVmSize": "Standard_D1",
+        "dmzdemoappvmVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+        "dmzdemoappvmSubnetRef": "[concat(variables('dmzdemoappvmVnetID'), '/subnets/', 'AppSubnetName')]",
+        "dmzdemoappvmStorageAccountContainerName": "vhds",
+        "dmzdemoappvmNicName": "[concat(parameters('dmzdemoappvmName'), 'NetworkInterface')]",
+        "dmzdemodbvmImagePublisher": "MicrosoftWindowsServer",
+        "dmzdemodbvmImageOffer": "WindowsServer",
+        "dmzdemodbvmOSDiskName": "dmzdemodbvmOSDisk",
+        "dmzdemodbvmVmSize": "Standard_D1",
+        "dmzdemodbvmVnetID": "[resourceId('Microsoft.Network/virtualNetworks', parameters('virtualNetworkName'))]",
+        "dmzdemodbvmSubnetRef": "[concat(variables('dmzdemodbvmVnetID'), '/subnets/', 'DBSubnetName')]",
+        "dmzdemodbvmStorageAccountContainerName": "vhds",
+        "dmzdemodbvmNicName": "[concat(parameters('dmzdemodbvmName'), 'NetworkInterface')]",
+        "dmzdemofevmpipName": "dmzdemofevmpip",
+        "dmzdemoappvmpipName": "dmzdemoappvmpip",
+        "dmzdemodbvmpipName": "dmzdemodbvmpip"
+    }
+}
+
