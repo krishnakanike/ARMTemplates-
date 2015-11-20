@@ -1,0 +1,45 @@
+{
+    "$schema": "http://schema.management.azure.com/schemas/2015-01-01/deploymentParameters.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "location": {
+            "value": "Central US"
+        },
+        "dmzdemofevmName": {
+            "value": "dmzdemofevm"
+        },
+        "dmzdemofevmAdminUserName": {
+            "value": "demouser"
+        },
+        "dmzdemofevmAdminPassword": {
+            "value": "demo@pass1"
+        },
+        "dmzdemoappvmName": {
+            "value": "dmzdemoappvm"
+        },
+        "dmzdemoappvmAdminUserName": {
+            "value": "demouser"
+        },
+        "dmzdemoappvmAdminPassword": {
+            "value": "demo@pass1"
+        },
+        "dmzdemodbvmName": {
+            "value": "dmzdemodbvm"
+        },
+        "dmzdemodbvmAdminUserName": {
+            "value": "demouser"
+        },
+        "dmzdemodbvmAdminPassword": {
+            "value": "demo@pass1"
+        },
+        "dmzdemofevmpipDnsName": {
+            "value": "dmzdemofevmdns"
+        },
+        "dmzdemoappvmpipDnsName": {
+            "value": "dmzdemoappvmdns"
+        },
+        "dmzdemodbvmpipDnsName": {
+            "value": "dmzdemodbvmdns"
+        }
+    }
+}
